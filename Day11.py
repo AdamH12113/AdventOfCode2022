@@ -40,7 +40,7 @@ class Monkey:
 		return len(self.items) > 0
 
 	def __str__(self):
-		return f"Monkey ({self.operation}) {self.test} {self.true_target} {self.false_target} {self.items}"
+		return f"Monkey ({self.operation}) {self.test} {self.true_target} {self.false_target} {self.items} {self.inspection_count}"
 
 def get_numbers(text):
 	return [int(n) for n in re.findall(r'\d+', text)]
@@ -68,25 +68,29 @@ print("Part 1: The total amount of monkey business is", monkey_business)
 
 # Part 2: Worry levels are no longer divided by 3 after inspection. What is the level
 # of monkey business after 10,000 rounds? The numbers get too large to run a simulation.
-# Fortunately, the monkeys are all testing for prime factors, so any operation involving
-# multiplication can be simplified. But what to do about addition...?
+# Fortunately, the monkeys are all testing for prime factors, and it turns out that
+# there are some helpful identities we can use:
+#   (a + b) mod c = ((a mod c) + (b mod c)) mod c
+#   (a * b) mod c = ((a mod c) * (b mod c)) mod c
+# By letting c be the product of the monkeys' prime factors, we can keep track of all
+# of the moduluses at once.
+mod_factor = math.prod(monkey.test for monkey in monkeys)
 def new_inspection(self):
 	self.inspection_count += 1
 	old = self.items.pop()
 	new = eval(self.operation)   # Security vulnerability
+	new = new % mod_factor
 	return new
 
-#Monkey.inspect_item = new_inspection
+Monkey.inspect_item = new_inspection
 monkeys_p2 = copy.deepcopy(monkeys)
 
-for round in range(2):
-	print(f"Round {round}")
+for round in range(10000):
+	#print(f"Round {round}")
 	for m in range(len(monkeys_p2)):
 		while monkeys_p2[m].has_items():
 			next_item = monkeys_p2[m].inspect_item()
 			target = monkeys_p2[m].get_target(next_item)
 			monkeys_p2[target].catch(next_item)
-	for monkey in monkeys_p2:
-		print(monkey)
 monkey_business = math.prod(sorted([m.inspection_count for m in monkeys_p2])[-2:])
 print("Part 2: The total amount of monkey business is", monkey_business)
