@@ -1,4 +1,5 @@
 import re, sys, copy, math
+from functools import cmp_to_key
 
 # Read the input
 try:
@@ -18,10 +19,8 @@ pairs = [(eval(pt.split('\n')[0]), eval(pt.split('\n')[1])) for pt in pairs_text
 # Part 1: How many pairs of packets are already in the right order? The comparison
 # algorithm can return either "true", "false", or "keep going".
 def compare(left, right):
-	#print(f"compare({left}, {right})")
 	if type(left) is int and type(right) is int:
 		result = True if left < right else False if left > right else None
-		#print("Both ints:", result)
 		return result
 	
 	if type(left) is int and type(right) is list:
@@ -49,3 +48,21 @@ def compare(left, right):
 # Note that indices are 1-based, not 0-based.
 correct_indices = [n+1 for n in range(len(pairs)) if compare(pairs[n][0], pairs[n][1])]
 print("Part 1: The sum of the correct indices is", sum(correct_indices))
+
+# Part 2: Sort all of the packets using the comparison function, including two newly-
+# added divider packets. The answer is the product of the resulting indices of those
+# two packets.
+packets = [eval(pkt_text) for pkt_text in input_text.replace('\n\n', '\n').split('\n')]
+packets.append([[2]])
+packets.append([[6]])
+
+# Python's built-in sorts don't support comparison functions directly,
+# but the functools module has a helper function to do the conversion.
+def sort_comparison_function(left, right):
+	c = compare(left, right)
+	return 1 if c else -1 if c == False else 0
+
+packets.sort(key=cmp_to_key(sort_comparison_function), reverse=True)
+div1 = packets.index([[2]]) + 1
+div2 = packets.index([[6]]) + 1
+print("Part 2: The product of the indices is", div1 * div2)
