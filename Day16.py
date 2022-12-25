@@ -52,50 +52,54 @@ for valve1 in ['AA'] + flow_valves:
 			continue
 		flow_distances[(valve1, valve2)] = find_shortest_distance(valve1, valve2)
 
-# Okay, weird thought -- if we divide a valve's flow rate by the time it takes to get there,
-# we get a proxy for how much pressure release we gain by opening a valve earlier. Let's
-# see if this works.
-proxy_vals = {v: flow_rates[v] / flow_distances[('AA', v)] for v in flow_valves}
-valve_order = sorted(proxy_vals, key=proxy_vals.__getitem__, reverse = True)
+# Let's try brute force. The 30-minute time limit puts a limit on how many valves we
+# can open, so we shouldn't have to try anywhere near 15! combinations.
+def flow_potential(minute, location, target):
+	movement_cost = flow_distances[(location, target)]
+	remaining_time = 30 - (minute + movement_cost + 1)
+	return minute + movement_cost + 1, flow_rates[target] * remaining_time
 
-active_capacity = 0
-total_release = 0
-minute = 1
-location = 'AA'
-for valve in valve_order:
-	dt = flow_distances[(location, valve)]
-	if minute + dt >= 30:
-		print(f"Overtime: {valve} {minute} {dt}")
-		dt = 31 - minute
-		print(f"Reducing dt to {dt}")
-		total_release += active_capacity * dt
-		minute += dt
-		print(f"  Release {active_capacity} * {dt} = {active_capacity * dt} -> {total_release}")
-		break
-	location = valve
-	print(f"Minute {minute:02d}: Go to {valve} (dt = {dt})")
-	minute += dt
-	new_release = active_capacity * dt
-	total_release += new_release
-	print(f"  Release {active_capacity} * {dt} = {new_release} -> {total_release}")
-	if minute > 30:
-		print(f"Overtime: {minute}")
-		break
+def find_best_score(minute, location, remaining_valves, indent=0):
+	if remaining_valves == []:
+		return 0
 
-	dt = 1
-	print(f"Minute {minute:02d}: Open {valve} (dt = {dt})")
-	minute += dt
-	if minute > 30:
-		print(f"Overtime: {minute}")
-		break
-	new_release = active_capacity * dt
-	total_release += new_release
-	print(f"  Release {active_capacity} * {dt} = {new_release} -> {total_release}")
-	
-	active_capacity += flow_rates[valve]
-	print(f"  Active capacity +{flow_rates[valve]} -> {active_capacity}")
-print(f"Minute {minute:02d}: Done opening valves")
-if minute <= 30:
-	total_release += (31 - minute) * active_capacity
-	print(f"Final: Release {active_capacity} * {31 - minute} = {(31 - minute) * active_capacity} -> {total_release}")
-print("Part 1: The maximum possible pressure that can be released is", total_release)
+	scores = []
+	for valve in remaining_valves:
+		new_minute, score = flow_potential(minute, location, valve)
+		if new_minute > 30:
+			scores.append(0)
+		else:
+			index = remaining_valves.index(valve)
+			new_remaining = remaining_valves[:index] + remaining_valves[index+1:]
+			scores.append(score + find_best_score(new_minute, valve, new_remaining, indent+1))
+	return max(scores)
+
+score = find_best_score(0, 'AA', flow_valves)
+print("Part 1: The best possible score is", score)
+
+# Part 2: We spent 4 of the 30 minutes training an elephant to help. Now there are two
+# actors moving simultaneously. Unfortunately, they don't sync up, so our search code
+# needs some work.
+def find_best_team_score(minute, location, remaining_valves, indent=0):
+	if indent == 0:
+		print(' '*indent, minute, location, remaining_valves)
+	if remaining_valves == []:
+		return 0
+
+	scores = []
+	for valve in remaining_valves:
+		new_minute, score = flow_potential(minute, location, valve)
+		if new_minute > 30:
+			scores.append(0)
+		else:
+			index = remaining_valves.index(valve)
+			new_remaining = remaining_valves[:index] + remaining_valves[index+1:]
+			scores.append(score + find_best_team_score(new_minute, valve, new_remaining, indent+1))
+	if indent == 0:
+		print(' '*(indent+1), scores)
+	return max(scores)
+
+
+
+
+
